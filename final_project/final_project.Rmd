@@ -1,0 +1,43 @@
+---
+title: "final_project"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(lavaan)
+library(semTools)
+library(tidyverse)
+library(here)
+library(rio)
+library(janitor)
+library(stringr)
+library(knitr)
+library(broom)
+library(tidyverse)
+library(hrbrthemes)
+library(viridis)
+library(ggridges)
+options("scipen" = 999)
+```
+
+```{r import_data, include=FALSE}
+qualtrics_raw <- import(here("final_project/data/covid_qualtrics_raw.csv"))
+mturk_raw <- import(here("final_project/data/covid_mturk_raw.csv"))
+raw <- full_join(qualtrics_raw, mturk_raw)
+raw_clean <- raw %>% 
+  clean_names() %>% 
+  dplyr::select(-c(status, progress, finished, distribution_channel, gdpr_notice, gdpr_consent, consent, start_date, end_date, duration_in_seconds, recorded_date, response_id, age_2, politic, survey_xp, gid, rid, q_total_duration, m_turk_code, sname, risn, opp, toluna_enc, gc, term, ls, vps, ip_block)) %>% 
+  slice(3:1180)
+```
+
+```{r simulate_randomness, include=FALSE}
+library(synthpop)
+my.seed <- 18
+synth_covid <- syn(raw, seed = my.seed)
+```
+
+
+
+

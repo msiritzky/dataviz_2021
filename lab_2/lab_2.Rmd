@@ -1,0 +1,59 @@
+---
+title: "lab 2"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+install.packages("fivethirtyeight")
+remotes::install_github("fivethirtyeightdata/fivethirtyeightdata")
+library(fivethirtyeight)
+library(fivethirtyeightdata)
+library(lavaan)
+library(semTools)
+library(tidyverse)
+library(here)
+library(rio)
+library(janitor)
+library(stringr)
+library(knitr)
+library(broom)
+library(tidyverse)
+library(hrbrthemes)
+library(viridis)
+library(ggridges)
+options("scipen" = 999)
+```
+
+```{r load_datasets, include=FALSE}
+gt <- google_trends
+ts <- tv_states
+cc <- comic_characters
+
+gt <- gt %>% 
+  pivot_longer(cols = c(hurricane_harvey_us, hurricane_irma_us, hurricane_maria_us, hurricane_jose_us), names_to = "hurricane", values_to = "trend")
+```
+
+```{r google_trends}
+# Visualize the change in trends for each hurricane over time in one plot with three scales. Map color to a discrete scale.
+gt %>% 
+  ggplot(aes(date, trend)) +
+  geom_line(aes(color = hurricane)) +
+  scale_color_viridis(discrete=TRUE) +
+  theme_minimal() +
+  xlab("Date") +
+  ylab("Trend on Google") +
+  labs(title = "Change in Google Search Trends for US Hurricanes Over Time (Aug-Sept 2017)")
+
+# Visualize the trends again, this time with solid shapes (if your first plot was already solid shapes, use lines). Hint, geom_area can be difficult to work with if you have a grouping factor. Try geom_ribbon instead
+gt %>% 
+  ggplot(aes(date, trend)) +
+  geom_ribbon() +
+  scale_color_viridis(discrete=TRUE) +
+  theme_minimal() +
+  xlab("Date") +
+  ylab("Trend on Google") +
+  labs(title = "Change in Google Search Trends for US Hurricanes Over Time (Aug-Sept 2017)")
+?geom_ribbon
+```

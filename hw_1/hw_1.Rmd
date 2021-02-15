@@ -1,0 +1,125 @@
+---
+title: "Homework 1"
+output:
+  pdf_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+options(tinytex.verbose = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(lavaan)
+library(semTools)
+library(tidyverse)
+library(here)
+library(rio)
+library(janitor)
+library(stringr)
+library(knitr)
+library(broom)
+library(tidyverse)
+library(hrbrthemes)
+library(viridis)
+library(ggridges)
+options("scipen" = 999)
+```
+
+```{r import_data, include=FALSE}
+assessments <- import(here("hw_1/data/assessments.csv"))
+courses <- import(here("hw_1/data/courses.csv"))
+student_assessment <- import(here("hw_1/data/studentAssessment.csv"))
+student_info <- import(here("hw_1/data/studentInfo.csv"))
+student_registration <- import(here("hw_1/data/studentRegistration.csv"))
+student_vle <- import(here("hw_1/data/studentVle.csv"))
+vle <- import(here("hw_1/data/vle.csv"))
+
+```
+
+```{r mutating_joins, include=TRUE}
+# combines individual student info (including education, gender, and final result designation) and their assessment scores
+stud_info_assess <- right_join(student_info, student_assessment) 
+
+# combines individual student info, assessment scores, and their registration/unregistration for modules
+stud_info_assess_regist <- right_join(stud_info_assess, student_registration)
+
+```
+
+```{r filtering_join, include=TRUE}
+# filter only TMA assessments
+tma_only <- assessments %>% 
+    filter(assessment_type == "TMA")
+
+# combines individual student info and the info about assessments, but only for TMA and no other assessments
+student <- semi_join(stud_info_assess_regist, tma_only)
+
+student <- student %>% 
+  filter(!is.na(score))
+```
+
+```{r make_visuals, include=TRUE}
+# histogram of scores grouped by gender
+student %>%
+  ggplot(aes(score)) +
+  geom_histogram(fill = "#A9E5C5",
+                 color = "white",
+                 alpha = 0.7,
+                 binwidth = 4) +
+  facet_wrap(~gender) +
+  theme_minimal() +
+  xlab("Score") +
+  ylab("Count") +
+  labs(title = "Distribution of TMA Scores by Gender")
+
+# ridgeline density plot of scores for each education level reached
+student %>% 
+  mutate(highest_education = fct_relevel(highest_education, "No Formal quals", "Lower Than A Level", "A Level or Equivalent", "HE Qualification", "Post Graduate Qualification")) %>%
+  ggplot(aes(score, highest_education)) +
+  ggridges::geom_density_ridges(fill = "#A9E5C5",
+                                color = "white",
+                                alpha = 0.7,
+                                bandwidth = 2) +
+  theme_minimal() +
+  xlab("Score") +
+  ylab("Highest Education Level Reached") +
+  labs(title = "TMA Scores by Highest Education Level Reached")
+
+# sina graph of scores by age group
+student %>% 
+  ggplot(aes(age_band, score)) +
+  ggforce::geom_sina(size = 0.001) +
+  coord_flip() +
+  theme_minimal() +
+  xlab("Age Group") +
+  ylab("Score") +
+  labs(title = "Distribution of TMA Scores by Age Group")
+
+```
+
+```{r reproduce_visual, include=TRUE}
+student %>% 
+  mutate(highest_education = fct_relevel(highest_education, "No Formal quals", "Lower Than A Level", "A Level or Equivalent", "HE Qualification", "Post Graduate Qualification")) %>%
+  mutate(final_result = fct_relevel(final_result, "Fail", "Withdrawn", "Pass", "Distinction")) %>% 
+  group_by(gender, final_result, highest_education) %>% 
+  summarize(score = mean(score)) %>% 
+  ungroup() %>%
+  ggplot(aes(score, highest_education)) +
+  geom_line(aes(group = highest_education), 
+            color = "#666666",
+            size = 3) +
+  geom_point(aes(color = gender),
+             size = 4) +
+  facet_wrap(~final_result,
+             ncol = 1) +
+	scale_color_brewer(palette = "Paired") +
+  theme_minimal() +
+  xlab("Average Score") +
+  ylab("Highest Education") +
+  labs(title = "Average TMA Scores",
+       subtitle = "Results displayed by Education, gender, and Final Result Designation",
+       caption = "Data from Kuzilek, Hlosta, & Zdrahal (2017).
+       https://analyse.kmi.open.ac.uk/open_dataset")
+```
