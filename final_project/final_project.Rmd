@@ -15,29 +15,201 @@ library(janitor)
 library(stringr)
 library(knitr)
 library(broom)
-library(tidyverse)
-library(hrbrthemes)
-library(viridis)
-library(ggridges)
+library(lmSupport)
+library(olsrr)
+library(psych)
+library(car)
+library(stats)
+library(lme4)
+library(sjPlot)
+library(glmmTMB)
+library(GGally)
+library(reghelper) # for simple slopes
+library(ggpubr)
+library(kableExtra)
+library(corx)
 options("scipen" = 999)
 ```
 
+# import and prep data
 ```{r import_data, include=FALSE}
-qualtrics_raw <- import(here("final_project/data/covid_qualtrics_raw.csv"))
-mturk_raw <- import(here("final_project/data/covid_mturk_raw.csv"))
-raw <- full_join(qualtrics_raw, mturk_raw)
-raw_clean <- raw %>% 
-  clean_names() %>% 
-  dplyr::select(-c(status, progress, finished, distribution_channel, gdpr_notice, gdpr_consent, consent, start_date, end_date, duration_in_seconds, recorded_date, response_id, age_2, politic, survey_xp, gid, rid, q_total_duration, m_turk_code, sname, risn, opp, toluna_enc, gc, term, ls, vps, ip_block)) %>% 
-  slice(3:1180)
+# import covid_data
+covid_data <-  import(here("data", "covid_data_full.csv"))
 ```
 
-```{r simulate_randomness, include=FALSE}
-library(synthpop)
-my.seed <- 18
-synth_covid <- syn(raw, seed = my.seed)
+```{r prep_country_data, include=FALSE}
+# countries by name, not number
+countries_in_order = c("Australia","Argentina","Mexico","India","Nigeria","Egypt","China","Saudi Arabia","USA")
+
+covid_data = covid_data %>%
+  mutate(country_of_residence = factor(country_of_residence, 
+                                       levels = c(1:9),
+                                       labels = countries_in_order))
 ```
 
+```{r measure_scores}
+# make column for government preparedness score
+covid_data = covid_data %>%
+  select(m_turk_code, contains("gov_prep")) %>%
+  gather(item, value, -m_turk_code) %>%
+  group_by(m_turk_code) %>%
+  summarize(gov_prep = mean(value)) %>%
+  full_join(covid_data)
 
+# make column for trust in gov score
+covid_data = covid_data %>%
+  select(m_turk_code, contains("trust_in_gov"),
+         - "trust_in_gov_oecd_71") %>%
+  gather(item, value, -m_turk_code) %>%
+  group_by(m_turk_code) %>%
+  summarize(trust = mean(value)) %>%
+  full_join(covid_data)
+
+# make column for gov performance score
+covid_data = covid_data %>%
+  select(m_turk_code, contains("gov_perf")) %>%
+  gather(item, value, -m_turk_code) %>%
+  group_by(m_turk_code) %>%
+  summarize(gov_perf = mean(value)) %>%
+  full_join(covid_data)
+
+# make column for gov compliance score
+covid_data = covid_data %>%
+  select(m_turk_code, contains("gov_comp")) %>%
+  gather(item, value, -m_turk_code) %>%
+  group_by(m_turk_code) %>%
+  summarize(gov_comp = mean(value)) %>%
+  full_join(covid_data)
+
+# make column for risk perception score
+covid_data = covid_data %>%
+  select(m_turk_code, contains("risk")) %>%
+  gather(item, value, -m_turk_code) %>%
+  group_by(m_turk_code) %>%
+  summarize(risk = mean(value)) %>%
+  full_join(covid_data)
+
+# make column for depression score
+covid_data = covid_data %>%
+  select(m_turk_code, contains("depression")) %>%
+  gather(item, value, -m_turk_code) %>%
+  group_by(m_turk_code) %>%
+  summarize(dep = mean(value)) %>%
+  full_join(covid_data)
+
+# make column for anxiety score
+covid_data = covid_data %>%
+  select(m_turk_code, contains("anxiety")) %>%
+  gather(item, value, -m_turk_code) %>%
+  group_by(m_turk_code) %>%
+  summarize(anx = mean(value)) %>%
+  full_join(covid_data)
+
+# covid_data = covid_data %>%
+#  mutate(
+#    dep = case_when(
+#      country_of_residence == "Mexico" ~ NA_real_,
+#      TRUE ~ dep), 
+#    risk = case_when(
+#      country_of_residence == "China" ~ NA_real_,
+#      TRUE ~ risk)
+#    )
+
+```
+
+# alphas and measure scores
+```{r alphas_overall}
+
+alpha_gov_prep <- covid_data %>% 
+  select(contains("gov_preparedness"))
+alpha_gov_prep <- alpha(alpha_gov_prep, check.keys = T)
+alpha_gov_prep <- alpha_gov_prep[["total"]]
+
+alpha_trust <- covid_data %>% 
+  select(contains("trust_in_gov"),
+         - "trust_in_gov_oecd_71")
+alpha_trust <- alpha(alpha_trust, check.keys = T)
+alpha_trust <- alpha_trust[["total"]]
+
+alpha_gov_perf <- covid_data %>% 
+  select(contains("gov_performance"))
+alpha_gov_perf <- alpha(alpha_gov_perf, check.keys = T)
+alpha_gov_perf <- alpha_gov_perf[["total"]]
+
+alpha_gov_comp <- covid_data %>% 
+  select(contains("gov_comp"))
+alpha_gov_comp <- alpha(alpha_gov_comp, check.keys = T)
+alpha_gov_comp <- alpha_gov_comp[["total"]]
+
+alpha_risk <- covid_data %>% 
+  select(contains("risk"))
+alpha_risk <- alpha(alpha_risk, check.keys = T)
+alpha_risk <- alpha_risk[["total"]]
+
+alpha_dep <- covid_data %>% 
+  select(contains("depression"))
+alpha_dep <- alpha(alpha_dep, check.keys = T)
+alpha_dep <- alpha_dep[["total"]]
+
+alpha_anx <- covid_data %>% 
+  select(contains("anxiety"))
+alpha_anx <- alpha(alpha_anx, check.keys = T)
+alpha_anx <- alpha_anx[["total"]]
+
+scale_labels_alpha <- c("gov_prep", "trust", "gov_perf", "gov_comp", "risk", "dep", "anx")
+alphas_table_general <- rbind(alpha_gov_prep, alpha_trust, alpha_gov_perf, alpha_gov_comp, alpha_risk, alpha_dep, alpha_anx)
+alphas_table_general <- cbind(scale_labels_alpha, alphas_table_general)
+
+alphas_table_general <- alphas_table_general %>% 
+  select(scale_labels_alpha, std.alpha) %>% 
+  mutate_if(is.numeric, round, digits = 3)
+alphas_table_general <- as.data.frame(alphas_table_general)
+print(alphas_table_general)
+
+rm(list = setdiff(ls(), c("covid_data", "alphas_table_general")))
+```
+
+# data viz 1
+
+```{r dataviz_1, include=FALSE}
+#	Visualize the relationship between trust in government and likelihood of compliance with government policies, introducing country as a third variable. I think this would work well as a line plot or scatterplot, with different countries in different colors.
+viz_1 <- covid_data %>% 
+ggplot(aes(trust, gov_comp)) +
+  geom_smooth(aes(colour = country_of_residence),
+             size = 0.5) +
+  facet_wrap(~country_of_residence) +
+  theme_minimal() +
+  scale_color_viridis_d() +
+  xlab("Trust in government") +
+  ylab("Compliance with government policies") +
+  labs(title = "Greater trust in government differentially predicts higher compliance")
+viz_1
+```
+
+```{dataviz_2, include=FALSE}
+# Visualize the distribution of adoption of preventive behaviors by country. I think this would work well as a ridgeline plot or boxplots. 
+viridis(n = 9)
+
+viz_2 <- covid_data %>% 
+  mutate(country_of_residence = fct_relevel(country_of_residence,  "Australia", "USA", "Argentina", "Saudi Arabia", "Mexico", "Egypt", "China", "Nigeria", "India")) %>%
+  ggplot(aes(prevent, country_of_residence)) +
+  ggridges::geom_density_ridges(aes(fill = country_of_residence),
+                                bandwidth = 0.6,
+                                alpha = 0.5,
+                                scale = 1.5) +
+  scale_fill_manual(values = c("#440154FF", "#472D7BFF", "#3B528BFF", "#2C728EFF", "#21908CFF", "#27AD81FF", "#5DC863FF", "#AADC32FF", "#FDE725FF")) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  xlab("Number of preventive behaviors adopted") +
+  ylab("") +
+  labs(title = "Adoption of preventive behaviors by country")
+viz_2
+```
+
+```{dataviz_3, include=FALSE}
+# Visualize the overlap between each of the predictor variables (trust in gov/perception of gov preparedness/perception of gov performance/risk perception/perceived controllability). I think this would work well as a heatmap or correlogram.
+
+
+```
 
 
