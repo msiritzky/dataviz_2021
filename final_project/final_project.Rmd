@@ -125,58 +125,6 @@ covid_data = covid_data %>%
 
 ```
 
-# alphas
-```{r alphas_overall}
-
-alpha_gov_prep <- covid_data %>% 
-  select(contains("gov_preparedness"))
-alpha_gov_prep <- alpha(alpha_gov_prep, check.keys = T)
-alpha_gov_prep <- alpha_gov_prep[["total"]]
-
-alpha_trust <- covid_data %>% 
-  select(contains("trust_in_gov"),
-         - "trust_in_gov_oecd_71")
-alpha_trust <- alpha(alpha_trust, check.keys = T)
-alpha_trust <- alpha_trust[["total"]]
-
-alpha_gov_perf <- covid_data %>% 
-  select(contains("gov_performance"))
-alpha_gov_perf <- alpha(alpha_gov_perf, check.keys = T)
-alpha_gov_perf <- alpha_gov_perf[["total"]]
-
-alpha_gov_comp <- covid_data %>% 
-  select(contains("gov_comp"))
-alpha_gov_comp <- alpha(alpha_gov_comp, check.keys = T)
-alpha_gov_comp <- alpha_gov_comp[["total"]]
-
-alpha_risk <- covid_data %>% 
-  select(contains("risk"))
-alpha_risk <- alpha(alpha_risk, check.keys = T)
-alpha_risk <- alpha_risk[["total"]]
-
-alpha_dep <- covid_data %>% 
-  select(contains("depression"))
-alpha_dep <- alpha(alpha_dep, check.keys = T)
-alpha_dep <- alpha_dep[["total"]]
-
-alpha_anx <- covid_data %>% 
-  select(contains("anxiety"))
-alpha_anx <- alpha(alpha_anx, check.keys = T)
-alpha_anx <- alpha_anx[["total"]]
-
-scale_labels_alpha <- c("gov_prep", "trust", "gov_perf", "gov_comp", "risk", "dep", "anx")
-alphas_table_general <- rbind(alpha_gov_prep, alpha_trust, alpha_gov_perf, alpha_gov_comp, alpha_risk, alpha_dep, alpha_anx)
-alphas_table_general <- cbind(scale_labels_alpha, alphas_table_general)
-
-alphas_table_general <- alphas_table_general %>% 
-  select(scale_labels_alpha, std.alpha) %>% 
-  mutate_if(is.numeric, round, digits = 3)
-alphas_table_general <- as.data.frame(alphas_table_general)
-print(alphas_table_general)
-
-rm(list = setdiff(ls(), c("covid_data", "alphas_table_general")))
-```
-
 # data viz 1
 
 ```{r dataviz_1, include=FALSE}
@@ -235,6 +183,32 @@ viz_3 <- heatmaply(cor,
         main = "Correlational heatmap of predictor variables",
         heatmap_layers = theme(axis.line=element_blank()))
 viz_3
+
+
+# I could do this on an item level...
+data_for_cor_full <- covid_data %>%
+  select(contains("perceived_control"),
+         contains("risk_perception"),
+         contains("trust_in_gov"),
+         -"trust_in_gov_oecd_71",
+         contains("gov_preparedness"),
+         contains("gov_performance"))
+cor_full <- as.matrix(cor(data_for_cor_full))
+
+viz_3_full <- heatmaply(cor_full, 
+        colors = viridis(n = 256, alpha = 1, begin = 1, end = 0),
+        dendrogram = "none",
+        grid_color = "white",
+        margins = c(60,100,50,20),
+        fontsize_col = 8,
+        fontsize_row = 8, 
+        labCol = colnames(cor_full),
+        labRow = rownames(cor_full),
+        xlab = "", 
+        ylab = "",
+        main = "Correlational heatmap of predictor variables",
+        heatmap_layers = theme(axis.line=element_blank()))
+viz_3_full
 
 ```
 
