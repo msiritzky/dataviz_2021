@@ -20,21 +20,15 @@ library(olsrr)
 library(psych)
 library(car)
 library(stats)
-library(lme4)
-library(sjPlot)
-library(glmmTMB)
-library(GGally)
-library(reghelper) # for simple slopes
-library(ggpubr)
-library(kableExtra)
-library(corx)
+library(viridis)
+library(heatmaply)
 options("scipen" = 999)
 ```
 
 # import and prep data
 ```{r import_data, include=FALSE}
 # import covid_data
-covid_data <-  import(here("data", "covid_data_full.csv"))
+covid_data <-  import(here("data", "synth_covid_data.csv"))
 ```
 
 ```{r prep_country_data, include=FALSE}
@@ -66,8 +60,7 @@ covid_data = covid_data %>%
 
 # make column for trust in gov score
 covid_data = covid_data %>%
-  select(m_turk_code, contains("trust_in_gov"),
-         - "trust_in_gov_oecd_71") %>%
+  select(m_turk_code, contains("trust_in_gov")) %>%
   gather(item, value, -m_turk_code) %>%
   group_by(m_turk_code) %>%
   summarize(trust = mean(value)) %>%
@@ -142,6 +135,7 @@ ggplot(aes(trust, gov_comp)) +
 viz_1
 ```
 
+# data viz 2
 ```{dataviz_2, include=FALSE}
 # Visualize the distribution of adoption of preventive behaviors by country. I think this would work well as a ridgeline plot or boxplots. 
 viridis(n = 9)
@@ -162,13 +156,13 @@ viz_2 <- covid_data %>%
 viz_2
 ```
 
+# data viz 3
 ```{dataviz_3, include=FALSE}
 # Visualize the overlap between each of the predictor variables (trust in gov/perception of gov preparedness/perception of gov performance/risk perception/perceived controllability). I think this would work well as a heatmap or correlogram.
 data_for_cor <- covid_data %>% 
   dplyr::select(c(trust, gov_perf, gov_prep, risk, control))
 cor <- as.matrix(cor(data_for_cor))
 
-library(heatmaply)
 viz_3 <- heatmaply(cor, 
         colors = viridis(n = 256, alpha = 1, begin = 1, end = 0),
         dendrogram = "none",
@@ -190,7 +184,6 @@ data_for_cor_full <- covid_data %>%
   select(contains("perceived_control"),
          contains("risk_perception"),
          contains("trust_in_gov"),
-         -"trust_in_gov_oecd_71",
          contains("gov_preparedness"),
          contains("gov_performance"))
 cor_full <- as.matrix(cor(data_for_cor_full))
