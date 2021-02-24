@@ -6,7 +6,6 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-install.packages("fivethirtyeight")
 remotes::install_github("fivethirtyeightdata/fivethirtyeightdata")
 library(fivethirtyeight)
 library(fivethirtyeightdata)
@@ -23,6 +22,7 @@ library(tidyverse)
 library(hrbrthemes)
 library(viridis)
 library(ggridges)
+library(ggrepel)
 options("scipen" = 999)
 ```
 
@@ -31,29 +31,127 @@ gt <- google_trends
 ts <- tv_states
 cc <- comic_characters
 
-gt <- gt %>% 
-  pivot_longer(cols = c(hurricane_harvey_us, hurricane_irma_us, hurricane_maria_us, hurricane_jose_us), names_to = "hurricane", values_to = "trend")
 ```
 
-```{r google_trends}
+```{r question 1}
+gt <- gt %>% 
+  rename("Harvey" = "hurricane_harvey_us",
+         "Irma" = "hurricane_irma_us",
+         "Maria" = "hurricane_maria_us",
+         "Jose" = "hurricane_jose_us") %>% 
+  pivot_longer(cols = c(Harvey, Irma, Maria, Jose), 
+               names_to = "hurricane", 
+               values_to = "trend")
+
 # Visualize the change in trends for each hurricane over time in one plot with three scales. Map color to a discrete scale.
-gt %>% 
+gt_viz_1 <- gt %>% 
   ggplot(aes(date, trend)) +
   geom_line(aes(color = hurricane)) +
-  scale_color_viridis(discrete=TRUE) +
+  scale_color_viridis_d(begin = 0, end = 0.8) +
   theme_minimal() +
   xlab("Date") +
   ylab("Trend on Google") +
   labs(title = "Change in Google Search Trends for US Hurricanes Over Time (Aug-Sept 2017)")
+gt_viz_1
 
-# Visualize the trends again, this time with solid shapes (if your first plot was already solid shapes, use lines). Hint, geom_area can be difficult to work with if you have a grouping factor. Try geom_ribbon instead
-gt %>% 
+# Visualize the trends again, this time with solid shapes.
+viridis_colors <- viridis(n = 4, begin = 0, end = 0.8)
+
+gt_viz_2 <- gt %>% 
   ggplot(aes(date, trend)) +
-  geom_ribbon() +
-  scale_color_viridis(discrete=TRUE) +
+  geom_ribbon(aes(ymin = 0, 
+                  ymax = trend, 
+                  fill = hurricane),
+              alpha = 0.5) +
+  scale_fill_manual(values = viridis_colors, name="fill") +
   theme_minimal() +
   xlab("Date") +
   ylab("Trend on Google") +
   labs(title = "Change in Google Search Trends for US Hurricanes Over Time (Aug-Sept 2017)")
-?geom_ribbon
+gt_viz_2
+
+# Visualize the same relation, but change the scales so color is mapped to a continuous scale.
+gt_viz_3 <- gt %>% 
+  ggplot(aes(date, hurricane, fill = trend)) +
+  geom_tile() +
+  scale_fill_viridis_c() +
+  theme_minimal() +
+  ylab("Hurricane") +
+  labs(title = "Change in Google Search Trends for US Hurricanes Over Time (Aug-Sept 2017)")
+gt_viz_3
+
+#Create a data frame (using tibble() or data.frame()) that includes the dates that each hurricane made landfall. Annotate one of your first two plots to include these reference points with vertical lines (Hint: use geom_vline(), specifying the data source for this layer as this new dataset). You do not have to include text annotations - just the vertical lines, but if you would like to try, look into geom_text() or geom_label(). 
+
+date <- as.Date(c("2017-08-25", "2017-09-10", "2017-09-20"))
+y <- c(50, 100, 25)
+labels <- c("Harvey landfall", "Irma landfall", "Maria landfall")
+gt_date_labels <- tibble(date, y, labels)
+
+gt_viz_5 <- gt %>% 
+  ggplot(aes(date, trend)) +
+  geom_ribbon(aes(ymin = 0, 
+                  ymax = trend, 
+                  fill = hurricane),
+              alpha = 0.5) +
+  scale_fill_manual(values = viridis_colors, name="fill") +
+  geom_vline(aes(xintercept = date), 
+             data = gt_date_labels,
+             linetype = "dashed") +
+  geom_text(data = vline_data, aes(x = date, y = y, 
+                                      label = labels)) + 
+  theme_minimal() +
+  xlab("Date") +
+  ylab("Trend on Google") +
+  labs(title = "Change in Google Search Trends for US Hurricanes Over Time (Aug-Sept 2017)")
+gt_viz_5
+
+```
+
+```{r question 2}
+ts <- ts %>% 
+  rename("Florida" = "florida",
+         "Texas" = "texas",
+         "Puerto Rico" = "puerto_rico") %>% 
+  pivot_longer(cols = c("Florida", "Texas", "Puerto Rico"), 
+               names_to = "state", 
+               values_to = "share")
+
+# Replicate the “National cable news networks” plot from the story using the tv_states data. Don’t worry about all the labels. Try to match the colors but don’t worry about getting them exact.
+date <- as.Date(c("2017-08-25", "2017-09-10", "2017-09-20", "2017-10-01"))
+y <- c(3, 4, 1.5, 2)
+labels <- c("Harvey landfall", "Irma landfall", "Maria landfall", "Las Vegas shooting")
+ts_date_labels <- tibble(date, y, labels)
+
+ts_viz <- ts %>% 
+  mutate(state = fct_relevel(state, 
+            "Florida", "Texas", "Puerto Rico")) %>%
+  ggplot(aes(date, share)) +
+  geom_ribbon(aes(ymin = 0, 
+                  ymax = share, 
+                  fill = state),
+              color = "white") +
+  scale_fill_manual(values = c("#fc5185", "#3fc1c9", "#ed713a")) +
+  geom_vline(aes(xintercept = date), 
+             data = ts_date_labels,
+             colour = "grey70",
+             linetype = "dotted") +
+  geom_text(data = gt_vline_data, aes(x = date, y = y, 
+                                      label = labels), 
+            colour = "grey70",
+            size = 3,
+            fontface = "italic") +
+  theme_minimal() +
+  xlab("") +
+  ylab("Share of sentences") +
+  labs(title = "National cable news networks",
+       caption = "Includes Bloomberg, CNBC, CNN, Fox Business, Fox News, and MSNBC.") +
+  theme(legend.title = element_blank()) +
+  theme(legend.position = "none")
+ts_viz
+```
+
+```{r question 3}
+# Use the comic_characters dataset to visualize the proportion of different genders using at least three different methods. With your final visualization, make any additional modifications you think would help reduce the cognitive load necessary to comprehend the figure.
+
+
 ```
