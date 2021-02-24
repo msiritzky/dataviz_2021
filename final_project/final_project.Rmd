@@ -41,7 +41,7 @@ covid_data = covid_data %>%
                                        labels = countries_in_order))
 ```
 
-```{r measure_scores}
+```{r measure_scores, include=FALSE}
 # make column for perceived controllability score
 covid_data = covid_data %>%
   select(m_turk_code, contains("perceived_control")) %>%
@@ -120,7 +120,7 @@ covid_data = covid_data %>%
 
 # data viz 1
 
-```{r dataviz_1, include=FALSE}
+```{r dataviz_1}
 #	Visualize the relationship between trust in government and likelihood of compliance with government policies, introducing country as a third variable. I think this would work well as a line plot or scatterplot, with different countries in different colors.
 viz_1 <- covid_data %>% 
 ggplot(aes(trust, gov_comp)) +
@@ -136,7 +136,7 @@ viz_1
 ```
 
 # data viz 2
-```{dataviz_2, include=FALSE}
+```{r dataviz_2}
 # Visualize the distribution of adoption of preventive behaviors by country. I think this would work well as a ridgeline plot or boxplots. 
 viridis(n = 9)
 
@@ -157,7 +157,7 @@ viz_2
 ```
 
 # data viz 3
-```{dataviz_3, include=FALSE}
+```{r dataviz_3}
 # Visualize the overlap between each of the predictor variables (trust in gov/perception of gov preparedness/perception of gov performance/risk perception/perceived controllability). I think this would work well as a heatmap or correlogram.
 data_for_cor <- covid_data %>% 
   dplyr::select(c(trust, gov_perf, gov_prep, risk, control))
