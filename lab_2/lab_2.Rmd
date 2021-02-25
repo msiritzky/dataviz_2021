@@ -23,6 +23,7 @@ library(hrbrthemes)
 library(viridis)
 library(ggridges)
 library(ggrepel)
+library(packcircles)
 options("scipen" = 999)
 ```
 
@@ -51,11 +52,12 @@ gt_viz_1 <- gt %>%
   theme_minimal() +
   xlab("Date") +
   ylab("Trend on Google") +
-  labs(title = "Change in Google Search Trends for US Hurricanes Over Time (Aug-Sept 2017)")
+  labs(title = "Change in Google Search Trends for US Hurricanes Over Time")
 gt_viz_1
 
 # Visualize the trends again, this time with solid shapes.
 viridis_colors <- viridis(n = 4, begin = 0, end = 0.8)
+viridis_color_1 <- viridis(n = 1)
 
 gt_viz_2 <- gt %>% 
   ggplot(aes(date, trend)) +
@@ -67,7 +69,7 @@ gt_viz_2 <- gt %>%
   theme_minimal() +
   xlab("Date") +
   ylab("Trend on Google") +
-  labs(title = "Change in Google Search Trends for US Hurricanes Over Time (Aug-Sept 2017)")
+  labs(title = "Change in Google Search Trends for US Hurricanes Over Time")
 gt_viz_2
 
 # Visualize the same relation, but change the scales so color is mapped to a continuous scale.
@@ -77,7 +79,7 @@ gt_viz_3 <- gt %>%
   scale_fill_viridis_c() +
   theme_minimal() +
   ylab("Hurricane") +
-  labs(title = "Change in Google Search Trends for US Hurricanes Over Time (Aug-Sept 2017)")
+  labs(title = "Change in Google Search Trends for US Hurricanes Over Time")
 gt_viz_3
 
 #Create a data frame (using tibble() or data.frame()) that includes the dates that each hurricane made landfall. Annotate one of your first two plots to include these reference points with vertical lines (Hint: use geom_vline(), specifying the data source for this layer as this new dataset). You do not have to include text annotations - just the vertical lines, but if you would like to try, look into geom_text() or geom_label(). 
@@ -97,12 +99,12 @@ gt_viz_5 <- gt %>%
   geom_vline(aes(xintercept = date), 
              data = gt_date_labels,
              linetype = "dashed") +
-  geom_text(data = vline_data, aes(x = date, y = y, 
+  geom_text(data = gt_date_labels, aes(x = date, y = y, 
                                       label = labels)) + 
   theme_minimal() +
   xlab("Date") +
   ylab("Trend on Google") +
-  labs(title = "Change in Google Search Trends for US Hurricanes Over Time (Aug-Sept 2017)")
+  labs(title = "Change in Google Search Trends for US Hurricanes Over Time")
 gt_viz_5
 
 ```
@@ -117,10 +119,16 @@ ts <- ts %>%
                values_to = "share")
 
 # Replicate the “National cable news networks” plot from the story using the tv_states data. Don’t worry about all the labels. Try to match the colors but don’t worry about getting them exact.
+
 date <- as.Date(c("2017-08-25", "2017-09-10", "2017-09-20", "2017-10-01"))
-y <- c(3, 4, 1.5, 2)
+y_axis <- c(3.2, 3.4, 2.5, 3)
 labels <- c("Harvey landfall", "Irma landfall", "Maria landfall", "Las Vegas shooting")
-ts_date_labels <- tibble(date, y, labels)
+ts_date_labels <- tibble(date, y_axis, labels)
+
+x <- as.Date(c("2017-08-29", "2017-09-10", "2017-10-01"))
+y <- c(0.9, 1.5, 1.5)
+labs <- c("Texas", "Florida", "Puerto Rico")
+ts_state_labels <- tibble(x, y, labs)
 
 ts_viz <- ts %>% 
   mutate(state = fct_relevel(state, 
@@ -130,21 +138,23 @@ ts_viz <- ts %>%
                   ymax = share, 
                   fill = state),
               color = "white") +
-  scale_fill_manual(values = c("#fc5185", "#3fc1c9", "#ed713a")) +
+  scale_fill_manual(values = c("#fc5185", "#ed713a", "#3fc1c9")) +
   geom_vline(aes(xintercept = date), 
              data = ts_date_labels,
              colour = "grey70",
              linetype = "dotted") +
-  geom_text(data = gt_vline_data, aes(x = date, y = y, 
-                                      label = labels), 
+  geom_text(data = ts_date_labels, aes(x = date, y = y_axis, label = labels), 
             colour = "grey70",
             size = 3,
             fontface = "italic") +
+  geom_text(data = ts_state_labels, aes(x = x, y = y, label = labs),
+            size = 4.5,
+            fontface = "bold") +
   theme_minimal() +
   xlab("") +
   ylab("Share of sentences") +
   labs(title = "National cable news networks",
-       caption = "Includes Bloomberg, CNBC, CNN, Fox Business, Fox News, and MSNBC.") +
+       caption = "Sources: Media Cloud, TV News Archive") +
   theme(legend.title = element_blank()) +
   theme(legend.position = "none")
 ts_viz
@@ -153,5 +163,85 @@ ts_viz
 ```{r question 3}
 # Use the comic_characters dataset to visualize the proportion of different genders using at least three different methods. With your final visualization, make any additional modifications you think would help reduce the cognitive load necessary to comprehend the figure.
 
+cc_sex <- cc %>% 
+  mutate(sex = case_when(
+    grepl("Transgender", sex) ~ "Transgender",
+    grepl("Male", sex) ~ "Male",
+    grepl("Genderless", sex) ~ "Genderless",
+    grepl("Genderfluid", sex) ~ "Genderfluid",
+    grepl("Female", sex) ~ "Female",
+    grepl("Agender", sex) ~ "Agender")
+    ) %>% 
+  mutate(sex = factor(sex,
+                      levels = c(
+                        "Male",
+                        "Female",
+                        "Agender", 
+                        "Genderless",
+                        "Genderfluid",
+                        "Transgender"))) %>% 
+  count(sex) %>% 
+  mutate(prop = n/23272,
+         percent = prop*100) %>% 
+  arrange(prop) %>% 
+  filter(!is.na(sex))
+
+# lollipop plot
+cc_viz_1 <- cc_sex %>% 
+  ggplot(aes(sex, prop)) +
+  geom_segment(aes(x = sex, 
+                   xend = sex, 
+                   y=0, 
+                   yend = prop),
+               color = "grey70") +
+  geom_point(fill = "#440154FF",
+           color = "#440154FF",
+           alpha = 0.7) +
+  coord_flip() +
+  scale_color_viridis(discrete = T, begin = 0, end = 0.8) +
+  theme_minimal() +
+  xlab("Gender identity") +
+  ylab("Proportion of characters") +
+  labs(title = "Gender representation in comic books")
+cc_viz_1
+
+# circle packing 
+packing <- circleProgressiveLayout(cc_sex$prop, sizetype='area')
+cc_sex_circle <- cbind(cc_sex, packing)
+dat.gg <- circleLayoutVertices(packing, npoints=50)
+
+cc_viz_2 <- cc_sex_circle %>% 
+  ggplot() + 
+  geom_polygon(data = dat.gg, 
+               aes(x, 
+                   y, 
+                   group = id, 
+                   fill = as.factor(id)), 
+               colour = "black", 
+               alpha = 0.6) +
+  scale_fill_manual(values = viridis(nrow(cc_sex_circle))) +
+  geom_text(data = cc_sex_circle, aes(x, 
+                               y, 
+                               size = prop, # I don't know how to offset the labels on a circle packing diagram, so instead of making them big and having them point to where they belong I just made them smaller...
+                               label = sex)) +
+  scale_size_continuous(range = c(1,4)) +
+  theme_void() + 
+  theme(legend.position="none") +
+  coord_equal()
+cc_viz_2
+
+# barplot
+cc_viz_3 <- cc_sex %>%
+  ggplot(aes(x = sex, y = prop)) +
+  geom_bar(stat="identity",
+           fill = "#440154FF",
+           color = "#440154FF",
+           alpha = 0.7) +
+  theme_minimal() +
+  xlab("Gender identity") +
+  coord_flip() +
+  ylab("Proportion of characters") +
+  labs(title = "Gender representation in comic books")
+cc_viz_3
 
 ```
