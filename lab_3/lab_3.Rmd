@@ -1,0 +1,194 @@
+---
+title: "lab_3"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(rio)
+library(here)
+library(gghighlight)
+library(viridis)
+library(colorblindr)
+library(janitor)
+library(albersusa)
+library(ggplot2)
+```
+
+# problem 1
+```{r}
+# Visualize the total production of honey across years by state. Use color to highlight the west coast (Washington, Oregon, and California) with a different color used for each west coast state.
+
+honey <-  import(here("lab_3", "data", "honeyproduction.csv"))
+
+honey_viz <- honey %>%
+  ggplot(aes(year, totalprod)) +
+  geom_line(aes(color = state)) +
+  gghighlight(state == "OR" |
+                state == "WA" |
+                state == "CA",
+              unhighlighted_params = list(alpha = 0.3)) +
+  theme_minimal() +
+  scale_color_viridis_d(begin = 0.7, end = 0.9, option = "C") +
+  xlab("") +
+  ylab("Total honey production (lbs)") +
+  labs(title = "Total production of honey across years by state")
+honey_viz
+```
+
+# problem 2
+```{r}
+# Reproduce the plot according to three different kinds of color blindness, as well as a desaturated version.
+honey_viz_cvd <- cvd_grid(honey_viz)
+honey_viz_cvd
+```
+
+# problem 3
+```{r}
+# Reproduce the plot using a color blind safe palette.
+honey_viz_cb <- honey %>%
+  ggplot(aes(year, totalprod)) +
+  geom_line(aes(color = state)) +
+  gghighlight(state == "OR" |
+                state == "WA" |
+                state == "CA",
+              unhighlighted_params = list(alpha = 0.3)) +
+  theme_minimal() +
+  scale_fill_OkabeIto() +
+  xlab("") +
+  ylab("Total honey production (lbs)") +
+  labs(title = "Total production of honey across years by state")
+honey_viz_cb
+
+```
+
+# problem 4
+```{r}
+# Download the file here denoting the region and division of each state.
+regions <-  import(here("lab_3", "data", "us_census_bureau_regions_and_divisions.csv"))
+
+# Join the file with your honey file.
+honey_full <- left_join(honey, regions, by = c("state" = "State Code"))
+honey_full <- honey_full %>% 
+  rename("state_code" = "state") %>% 
+  clean_names()
+
+# Produce a bar plot displaying the average honey for each state (collapsing across years). Use color to highlight the region of the country the state is from.
+avg_honey_state <- honey_full %>% 
+  group_by(state, region) %>% 
+  summarise(avg_honey = mean(totalprod))
+
+honey_bar <- avg_honey_state %>%
+  ggplot(aes(avg_honey, fct_reorder(state, avg_honey))) +
+  geom_bar(stat = "identity", aes(fill = region)) +
+  theme_minimal() +
+  scale_fill_viridis_d(option = "B", begin = 0.2, end = 0.9) +
+  xlab("Honey production (lbs)") +
+  ylab("") +
+  labs(title = "Average honey production by state")
+honey_bar
+
+# Note patterns you notice.
+avg_honey_state <- left_join(avg_honey_state, regions, by = c("state" = "State"))
+avg_honey_state <- avg_honey_state %>% 
+  clean_names()
+
+honey_bar_midwest <- avg_honey_state %>%
+  ggplot(aes(avg_honey, fct_reorder(state_code, avg_honey))) +
+  geom_bar(stat = "identity", aes(fill = region)) +
+  theme_minimal() +
+  scale_fill_viridis_d(option = "B", end = 0.3, direction = -1) +
+  xlab("Honey production (lbs)") +
+  ylab("") +
+  gghighlight(region == "Midwest",
+              unhighlighted_params = list(alpha = 0.3))
+
+honey_bar_northeast <- avg_honey_state %>%
+  ggplot(aes(avg_honey, fct_reorder(state_code, avg_honey))) +
+  geom_bar(stat = "identity", aes(fill = region)) +
+  theme_minimal() +
+  scale_fill_viridis_d(option = "B", end = 0.5, direction = -1) +
+  xlab("Honey production (lbs)") +
+  ylab("") +
+  gghighlight(region == "Northeast",
+              unhighlighted_params = list(alpha = 0.3))
+
+honey_bar_south <- avg_honey_state %>%
+  ggplot(aes(avg_honey, fct_reorder(state_code, avg_honey))) +
+  geom_bar(stat = "identity", aes(fill = region)) +
+  theme_minimal() +
+  scale_fill_viridis_d(option = "B", end = 0.7, direction = -1) +
+  xlab("Honey production (lbs)") +
+  ylab("") +
+  gghighlight(region == "South",
+              unhighlighted_params = list(alpha = 0.3))
+
+honey_bar_west <- avg_honey_state %>%
+  ggplot(aes(avg_honey, fct_reorder(state_code, avg_honey))) +
+  geom_bar(stat = "identity", aes(fill = region)) +
+  theme_minimal() +
+  scale_fill_viridis_d(option = "B", end = 0.9, direction = -1) +
+  xlab("Honey production (lbs)") +
+  ylab("") +
+  gghighlight(region == "West",
+              unhighlighted_params = list(alpha = 0.3))
+
+honey_bar_fig <- ggpubr::ggarrange(honey_bar_midwest, honey_bar_northeast, honey_bar_west, honey_bar_south,
+                           labels = c("Midwest", "Northeast", "West", "South"),
+                           ncol = 2, nrow = 2)
+honey_bar_fig
+
+# I notice that states in the Midwest are concentrated more towards the top of the graph, indicating that overall they seem to have a higher average production of honey. In contrast, states in the Northeast have a lower average production of honey. 
+
+# This is a technical question, not a pattern I noticed, but would it be possible to only label the states on the y-axis that I'm interested in? 
+```
+
+# problem 5
+
+```{r}
+# Create a heatmap displaying the average honey production across years by region (averaging across states within region).
+avg_honey_region <- honey_full %>% 
+  group_by(region, year) %>% 
+  summarise(avg_honey = mean(totalprod))
+
+honey_heat <- avg_honey_region %>% 
+  ggplot(aes(year, fct_reorder(region, avg_honey))) +
+  geom_tile(aes(fill = avg_honey)) +
+  scale_fill_viridis_c("Honey production (lbs)", option = "B", direction = -1) +
+  theme_minimal() +
+  xlab("") +
+  ylab("Region") + 
+  labs(title = "Average honey production across years")
+honey_heat
+
+```
+
+
+# problem 6
+```{r}
+# Create at least one more plot of your choosing using color to distinguish, represent data values, or highlight. 
+us <- usa_sf()
+honey_price <- honey_full %>% 
+  group_by(state) %>% 
+  summarise(avg_price = mean(priceperlb))
+honey_geo <- full_join(us, honey_price, by = c("name" = "state"))
+honey_geo <- honey_geo %>% 
+  replace(is.na(.), 0)
+
+honey_geo_viz <- honey_geo %>% 
+  ggplot() +
+  geom_sf(aes(fill = avg_price)) +
+  scale_fill_viridis("Average price of honey", 
+                     option = "B",
+                     end = 0.9, 
+                     direction = -1,
+                     na.value = "gray80") +
+  theme_void() + 
+  labs(title = "Average price of honey across states")
+honey_geo_viz
+
+
+```
