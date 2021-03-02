@@ -7,5 +7,8 @@ Meg, this is an excellent project. I learned about the power of the *psych* pack
 2. I enjoyed the interactivity of the third visualization, such that I could identify exact correlation values for each cell. It also seemed to me as though the heatmap was best suited to interactivity, so great pick!
 3. Your second data visualization is exceptionally well done aesthetically. I think you absolutely nailed the best-case use of ggridges, with appropriate use of transparency, color, overlap.
 
+## Point of Learning
+I mentioned this right in-code, but your use of the gather() function was neat. 
 
-  
+## Points of improvement
+All made in-code. Mostly color/aesthetic choices. Nothing major!
