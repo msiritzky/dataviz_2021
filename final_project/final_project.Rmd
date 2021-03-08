@@ -42,12 +42,14 @@ covid_data = covid_data %>%
 ```
 
 ```{r measure_scores, include=FALSE}
-#It seems like you are doing a pretty repetative process with these columns, and I think it would be possible to use something like lapply or something similar to create a function that you could then use iteratively for each of these variables
 
-# make column for perceived controllability score
+#Ann-Marie: It seems like you are doing a pretty repetative process with these columns, and I think it would be possible to use something like lapply or something similar to create a function that you could then use iteratively for each of these variables
+
+# make column for perceived controlability score
 covid_data = covid_data %>%
   select(m_turk_code, contains("perceived_control")) %>%
   gather(item, value, -m_turk_code) %>%
+  #this is a learning point for me - I haven't seen gather() applied in this way. I think I know what it's doing... but I'll look at the documentation some more to solidify my own learning here.
   group_by(m_turk_code) %>%
   summarize(control = mean(value)) %>%
   full_join(covid_data)
@@ -108,6 +110,8 @@ covid_data = covid_data %>%
   summarize(anx = mean(value)) %>%
   full_join(covid_data)
 
+#Note: there may be a more succinct way to udpate your covid_data df without needing to individually select(), gather(), group(), summarize(), and then full_join() it. Becuase of my own unfamiliarity with your approach using the gather() function, I didn't dig too far into condensing this for you. Also, there may not be a more efficient way to do it; I'm unsure.
+
 # covid_data = covid_data %>%
 #  mutate(
 #    dep = case_when(
@@ -130,13 +134,16 @@ covid_data = covid_data %>%
 viz_1 <- covid_data %>% 
 ggplot(aes(trust, gov_comp)) +
   geom_smooth(aes(colour = country_of_residence),
+              #Colour spelled ^ with the non-American variant; love to see it!
              size = 0.5) +
   facet_wrap(~country_of_residence) +
   theme_minimal() +
   scale_color_viridis_d() +
   xlab("Trust in government") +
   ylab("Compliance with government policies") +
-  labs(title = "Greater trust in government differentially predicts higher compliance")
+  labs(title = "Greater trust in government differentially predicts higher compliance",
+       colour = "Country")
+#Changed legend title to be succinct
 viz_1
 ```
 
@@ -145,7 +152,8 @@ viz_1
 #Love the ridgeline plots! 
 
 # Visualize the distribution of adoption of preventive behaviors by country. I think this would work well as a ridgeline plot or boxplots. 
-viridis(n = 9)
+# viridis(n = 9)
+#likely don't need this ^ line of code
 
 viz_2 <- covid_data %>% 
   mutate(country_of_residence = fct_relevel(country_of_residence,  "Australia", "USA", "Argentina", "Saudi Arabia", "Mexico", "Egypt", "China", "Nigeria", "India")) %>%
@@ -161,6 +169,8 @@ viz_2 <- covid_data %>%
   ylab("") +
   labs(title = "Adoption of preventive behaviors by country")
 viz_2
+
+#really well done - every line of code looks to have value and contribute to an awesome viz. My only point of improvement wasn't super related to the viz - it was just extraneous code
 ```
 
 # data viz 3
@@ -173,7 +183,8 @@ data_for_cor <- covid_data %>%
 cor <- as.matrix(cor(data_for_cor))
 
 viz_3 <- heatmaply(cor, 
-        colors = viridis(n = 256, alpha = 1, begin = 1, end = 0),
+        colors = magma(n = 512, alpha = 1, begin = 1, end = 0),
+        # changed the colour palette to align with a (potentially) more intuitive gradient and increased the n size to sample a large amount of colours such that small differences in correlations are detectable
         dendrogram = "none",
         grid_color = "white",
         margins = c(60,100,50,20),
@@ -187,8 +198,10 @@ viz_3 <- heatmaply(cor,
         heatmap_layers = theme(axis.line=element_blank()))
 viz_3
 
+#really nice! A small suggestion for colour gradient changes, but that's it
 
 # I could do this on an item level...
+# You could! I'd say that your first heatmap tells the same story with less units to keep track of in a correlation matrix. 
 data_for_cor_full <- covid_data %>%
   select(contains("perceived_control"),
          contains("risk_perception"),
