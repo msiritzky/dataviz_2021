@@ -42,6 +42,9 @@ covid_data = covid_data %>%
 ```
 
 ```{r measure_scores, include=FALSE}
+
+#Ann-Marie: It seems like you are doing a pretty repetative process with these columns, and I think it would be possible to use something like lapply or something similar to create a function that you could then use iteratively for each of these variables
+
 # make column for perceived controlability score
 covid_data = covid_data %>%
   select(m_turk_code, contains("perceived_control")) %>%
@@ -125,6 +128,9 @@ covid_data = covid_data %>%
 
 ```{r dataviz_1}
 #	Visualize the relationship between trust in government and likelihood of compliance with government policies, introducing country as a third variable. I think this would work well as a line plot or scatterplot, with different countries in different colors.
+
+#The colors can be a bit difficult to differentiate here between countries; I might switch them up to appear more different. Also, you could change the color of the confidence interval to be a lighter hue that matches each line. I'm not sure if the legend provides additional information since each graph is labeled separately. 
+
 viz_1 <- covid_data %>% 
 ggplot(aes(trust, gov_comp)) +
   geom_smooth(aes(colour = country_of_residence),
@@ -143,6 +149,8 @@ viz_1
 
 # data viz 2
 ```{r dataviz_2}
+#Love the ridgeline plots! 
+
 # Visualize the distribution of adoption of preventive behaviors by country. I think this would work well as a ridgeline plot or boxplots. 
 # viridis(n = 9)
 #likely don't need this ^ line of code
@@ -167,6 +175,8 @@ viz_2
 
 # data viz 3
 ```{r dataviz_3}
+#Great interactional quality in this visualization! My main suggestion would be to fix the variable names and maybe make them a little bigger. 
+
 # Visualize the overlap between each of the predictor variables (trust in gov/perception of gov preparedness/perception of gov performance/risk perception/perceived controllability). I think this would work well as a heatmap or correlogram.
 data_for_cor <- covid_data %>% 
   dplyr::select(c(trust, gov_perf, gov_prep, risk, control))
